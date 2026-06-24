@@ -12,33 +12,34 @@
 # @raycast.author dinhtungdu
 # @raycast.authorURL https://raycast.com/dinhtungdu
 
-osascript -e 'tell application "Arc" to get URL of active tab of first window' | pbcopy
+current_url=$(osascript -e 'tell application "Google Chrome" to get URL of active tab of first window')
 
-# Extract PR number from URL copied to clipboard, the format is like github.com/woocommerce/woocommerce/pull/12345 or github.com/woocommerce/woocommerce/pull/12345/files
-
-# Extract PR number from URL copied to clipboard in macOS
-if [[ $(pbpaste) =~ github.com/[^/]+/[^/]+/pull/([0-9]+) ]]; then
-	pr_number="${BASH_REMATCH[1]}"
+# Extract repo and PR number from URLs like:
+# https://github.com/woocommerce/woocommerce/pull/12345
+# https://github.com/woocommerce/woocommerce/pull/12345/files
+if [[ $current_url =~ github\.com/([^/]+)/([^/]+)/pull/([0-9]+) ]]; then
+	owner="${BASH_REMATCH[1]}"
+	repo="${BASH_REMATCH[2]}"
+	pr_number="${BASH_REMATCH[3]}"
 else
-	echo "No PR number found in the URL."
+	echo "No GitHub PR number found in the active Chrome tab."
 	exit 1
 fi
 
-# Checkout PR
-cd ~/workspace/woocommerce/
+repo_path="$HOME/workspace/$repo"
 
-# reset pmpm lock file
-git checkout -- pnpm-lock.yaml
-
-# Notify if the current branch isn't clean
-if [[ $(git status --porcelain) ]]; then
-	echo "Please commit or stash your changes before checking out a PR."
-	# copy the command to clipboard
-	echo "gh pr checkout $pr_number && pnpm i && pnpm run --filter='@woocommerce/plugin-woocommerce' watch:build" | pbcopy
+if [[ ! -d $repo_path ]]; then
+	echo "Local repo not found: $repo_path"
 	exit 1
 fi
 
-# Fetch PR branch
-echo "Checking out PR #$pr_number..."
-gh pr checkout $pr_number
-echo "Checked out PR #$pr_number."
+if ! command -v pi >/dev/null 2>&1; then
+	echo "pi not found in PATH."
+	exit 1
+fi
+
+cd "$repo_path" || exit 1
+
+prompt="Use the worktree-pi-session skill. Checkout GitHub PR #$pr_number in a worktree. PR URL: $current_url. Repo: $repo_path. GitHub repo: $owner/$repo."
+
+pi -p "$prompt"
