@@ -3,7 +3,7 @@
 # Required parameters:
 # @raycast.schemaVersion 1
 # @raycast.title Checkout current GitHub PR
-# @raycast.mode compact
+# @raycast.mode silent
 
 # Optional parameters:
 # @raycast.icon 🤖
@@ -11,6 +11,10 @@
 # Documentation:
 # @raycast.author dinhtungdu
 # @raycast.authorURL https://raycast.com/dinhtungdu
+
+# Raycast runs Script Commands with a sparse PATH. pi shells out to `watcher`,
+# which is installed under ~/.bun/bin on this machine.
+export PATH="$HOME/.bun/bin:$HOME/.nvm/versions/node/v24.15.0/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 current_url=$(osascript -e 'tell application "Google Chrome" to get URL of active tab of first window')
 
@@ -42,4 +46,8 @@ cd "$repo_path" || exit 1
 
 prompt="Use the worktree-pi-session skill. Checkout GitHub PR #$pr_number in a worktree. PR URL: $current_url. Repo: $repo_path. GitHub repo: $owner/$repo."
 
-pi -p "$prompt"
+log_file="${TMPDIR:-/tmp}/checkout-current-github-pr.log"
+
+nohup pi -p "$prompt" >"$log_file" 2>&1 < /dev/null &
+
+exit 0
